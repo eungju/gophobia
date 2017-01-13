@@ -2,9 +2,9 @@ package resp_test
 
 import (
 	. "."
-	"reflect"
 	"strings"
 	"testing"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParsingInlineCommand(t *testing.T) {
@@ -13,8 +13,5 @@ func TestParsingInlineCommand(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	expected := []string{"mget", "a", "b", "c"}
-	if !reflect.DeepEqual(r, expected) {
-		t.Errorf("Expected %s but %s", expected, r)
-	}
+	assert.Equal(t, []string{"mget", "a", "b", "c"}, r)
 }
