@@ -13,7 +13,8 @@ func TestParsingInlineCommand(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(r, []string{"mget", "a", "b", "c"}) {
-		t.Error("Unexpected")
+	expected := []string{"mget", "a", "b", "c"}
+	if !reflect.DeepEqual(r, expected) {
+		t.Errorf("Expected %s but %s", expected, r)
 	}
 }
