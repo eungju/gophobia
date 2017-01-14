@@ -10,10 +10,10 @@ import (
 
 const (
 	simpleStringType = '+'
-	errorType  = '-'
-	intType    = ':'
+	errorType = '-'
+	integerType = ':'
 	bulkStringType = '$'
-	arrayType  = '*'
+	arrayType = '*'
 )
 
 var lineSeparator = []byte("\r\n")
@@ -23,6 +23,7 @@ var inlineCommandSeparator = regexp.MustCompile("\\s+")
 type RespValue interface {
 	AsSimpleString() (*RespSimpleString, error)
 	AsError() (*RespError, error)
+	AsInteger() (*RespInteger, error)
 	AsBulkString() (*RespBulkString, error)
 	AsArray() (*RespArray, error)
 }
@@ -37,6 +38,10 @@ func (resp *RespSimpleString) AsSimpleString() (*RespSimpleString, error) {
 
 func (resp *RespSimpleString) AsError() (*RespError, error) {
 	return nil, fmt.Errorf("Expected RespError but RespSimpleString")
+}
+
+func (resp *RespSimpleString) AsInteger() (*RespInteger, error) {
+	return nil, fmt.Errorf("Expected RespInteger but RespSimpleString")
 }
 
 func (resp *RespSimpleString) AsBulkString() (*RespBulkString, error) {
@@ -59,6 +64,10 @@ func (resp *RespError) AsError() (*RespError, error) {
 	return resp, nil
 }
 
+func (resp *RespError) AsInteger() (*RespInteger, error) {
+	return nil, fmt.Errorf("Expected RespInteger but RespError")
+}
+
 func (resp *RespError) AsBulkString() (*RespBulkString, error) {
 	return nil, fmt.Errorf("Expected RespBulkString but RespError")
 }
@@ -67,6 +76,29 @@ func (resp *RespError) AsArray() (*RespArray, error) {
 	return nil, fmt.Errorf("Expected RespArray but RespError")
 }
 
+type RespInteger struct {
+	Value int64
+}
+
+func (resp *RespInteger) AsSimpleString() (*RespSimpleString, error) {
+	return nil, fmt.Errorf("Expected RespSimpleString but RespInteger")
+}
+
+func (resp *RespInteger) AsError() (*RespError, error) {
+	return nil, fmt.Errorf("Expected RespInteger but RespInteger")
+}
+
+func (resp *RespInteger) AsInteger() (*RespInteger, error) {
+	return resp, nil
+}
+
+func (resp *RespInteger) AsBulkString() (*RespBulkString, error) {
+	return nil, fmt.Errorf("Expected RespBulkString but RespInteger")
+}
+
+func (resp *RespInteger) AsArray() (*RespArray, error) {
+	return nil, fmt.Errorf("Expected RespArray but RespInteger")
+}
 
 type RespBulkString struct {
 	Value []byte
@@ -78,6 +110,10 @@ func (resp *RespBulkString) AsSimpleString() (*RespSimpleString, error) {
 
 func (resp *RespBulkString) AsError() (*RespError, error) {
 	return nil, fmt.Errorf("Expected RespError but RespBulkString")
+}
+
+func (resp *RespBulkString) AsInteger() (*RespInteger, error) {
+	return nil, fmt.Errorf("Expected RespInteger but RespBulkString")
 }
 
 func (resp *RespBulkString) AsBulkString() (*RespBulkString, error) {
@@ -98,6 +134,10 @@ func (resp *RespArray) AsSimpleString() (*RespSimpleString, error) {
 
 func (resp *RespArray) AsError() (*RespError, error) {
 	return nil, fmt.Errorf("Expected RespError but RespArray")
+}
+
+func (resp *RespArray) AsInteger() (*RespInteger, error) {
+	return nil, fmt.Errorf("Expected RespInteger but RespArray")
 }
 
 func (resp *RespArray) AsBulkString() (*RespBulkString, error) {
@@ -126,18 +166,24 @@ func (reader *Reader) Read() (RespValue, error) {
 		return &RespSimpleString{line[1:]}, nil
 	} else if errorType == respType {
 		return &RespError{line[1:]}, nil
-	} else if arrayType == respType {
-		length, err := strconv.Atoi(string(line[1:]))
+	} else if integerType == respType {
+		value, err := strconv.Atoi(string(line[1:]))
 		if err != nil {
 			return nil, err
 		}
-		return reader.readArray(length)
+		return &RespInteger{int64(value)}, nil
 	} else if bulkStringType == respType {
 		bytes, err := strconv.Atoi(string(line[1:]))
 		if err != nil {
 			return nil, err
 		}
 		return reader.readBulkString(bytes)
+	} else if arrayType == respType {
+		length, err := strconv.Atoi(string(line[1:]))
+		if err != nil {
+			return nil, err
+		}
+		return reader.readArray(length)
 	}
 	return nil, fmt.Errorf("Unknown type %s", respType)
 }
@@ -203,11 +249,11 @@ func (reader *CommandReader) Read() ([]string, error) {
 		array, err := reader.readArray(length)
 		command := make([]string, length)
 		for i := 0; i < length; i++ {
-			bs, err := array.Value[i].AsBulkString()
+			element, err := array.Value[i].AsBulkString()
 			if err != nil {
 				return nil, err
 			}
-			command[i] = string(bs.Value)
+			command[i] = string(element.Value)
 		}
 		return command, nil
 	}

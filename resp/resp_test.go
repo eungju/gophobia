@@ -19,6 +19,12 @@ func TestParsingError(t *testing.T) {
 	assert.Equal(t, &RespError{[]byte("Error message")}, actual)
 }
 
+func TestParsingInteger(t *testing.T) {
+	dut := NewReader(strings.NewReader(":42\r\n"))
+	actual, _ := dut.Read()
+	assert.Equal(t, &RespInteger{42}, actual)
+}
+
 func TestParsingBulkString(t *testing.T) {
 	dut := NewReader(strings.NewReader("$3\r\nget\r\n"))
 	actual, _ := dut.Read()
